@@ -46,10 +46,10 @@ func main() {
 	// pubay := "4bfb0f0a630e7ae6c6f1248ab34e0c3ad57c7845bd5142d3332c93849854bbff"
 
 	fmt.Printf("\nYour private key %x", priva.Bytes())
-	fmt.Printf("\nYour public key (%x)\n", puba.Bytes())
+	fmt.Printf("\nYour public key %x\n", puba.Bytes())
 
 	fmt.Printf("Your public Key formatted for echo:\n")
-	fmt.Printf("echo -ne \"%s\"\n\n", ConvertBytesToEchoFormat(puba.Bytes()))
+	fmt.Printf("echo -ne \"%s\" > /tmp/fifo\n\n", ConvertBytesToEchoFormat(puba.Bytes()))
 
 	reader := bufio.NewReader(os.Stdin)
 	goodKey := false
@@ -117,7 +117,7 @@ func main() {
 			fmt.Printf("\nEncrypted message: %x\n\n", ciphertext)
 
 			fmt.Printf("Encrypted message formatted for echo:\n")
-			fmt.Printf("echo -ne \"%s\"\n\n", ConvertBytesToEchoFormat(ciphertext))
+			fmt.Printf("echo -ne \"%s\" > /tmp/fifo\n\n", ConvertBytesToEchoFormat(ciphertext))
 			continue
 		} else if userInput[0] == 'd' {
 			ciphertext, _ := hex.DecodeString(userInput[2:])
