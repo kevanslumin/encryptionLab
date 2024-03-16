@@ -85,6 +85,11 @@ func main() {
 		log.Fatalf("\nUnable to create a new aes encryption key from shared secret: %v", err)
 	}
 
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		log.Fatalf("\nUnable to create a new GCM: %v", err)
+	}
+
 	fmt.Print("\n\nBegin a line with e to encrypt or d to decrypt: \n")
 	for {
 
@@ -96,30 +101,35 @@ func main() {
 		if userInput[0] == 'e' {
 			message := userInput[2:]
 
-			// The IV will be transmitted at the front of the ciphertext
-			ciphertext := make([]byte, aes.BlockSize+len(message))
-			iv := ciphertext[:aes.BlockSize]
-			if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-				panic(err)
+			// Never use more than 2^32 random nonces with a given key because of the risk of a repeat.
+			nonce := make([]byte, 12)
+			if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+				log.Fatalf("\nUnable to create a nonce: %v", err)
 			}
 
-			stream := cipher.NewCTR(block, iv)
-			stream.XORKeyStream(ciphertext[aes.BlockSize:], []byte(message))
+			ciphertext := aesgcm.Seal(nil, nonce, []byte(message), nil)
 
-			fmt.Printf("\nEncrypted message: %x\n\n", ciphertext)
+			// transmit the nonce at the front of the ciphertext
+			noncePlusCiphertext := append(nonce, ciphertext...)
+			fmt.Printf("\nEncrypted message: %x\n\n", noncePlusCiphertext)
 
 			fmt.Printf("Encrypted message formatted for echo:\n")
 			fmt.Printf("echo -ne \"%s\" > /tmp/fifo\n\n", ConvertBytesToEchoFormat(ciphertext))
 			continue
 		} else if userInput[0] == 'd' {
 
-			ciphertext, _ := hex.DecodeString(userInput[2:])
+			noncePlusCiphertext, _ := hex.DecodeString(userInput[2:])
 
-			// The IV is at the front of the ciphertext
-			iv := ciphertext[:aes.BlockSize]
-			message := make([]byte, len(ciphertext[aes.BlockSize:]))
-			stream := cipher.NewCTR(block, iv)
-			stream.XORKeyStream(message, ciphertext[aes.BlockSize:])
+			// The nonce is at the front of the ciphertext
+			nonce := noncePlusCiphertext[:12]
+			ciphertext := noncePlusCiphertext[12:]
+			message := make([]byte, len(noncePlusCiphertext[12:]))
+			message, err := aesgcm.Open(nil, nonce, ciphertext, nil)
+			if err != nil {
+				fmt.Printf("\nUnable to decrypt message: %v", err)
+				fmt.Print("\n\nBegin a line with e to encrypt or d to decrypt: \n")
+				continue
+			}
 
 			fmt.Printf("Decrypted message: %s\n", message)
 		} else {
