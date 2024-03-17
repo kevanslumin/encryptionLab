@@ -114,7 +114,7 @@ func main() {
 			fmt.Printf("\nEncrypted message: %x\n\n", noncePlusCiphertext)
 
 			fmt.Printf("Encrypted message formatted for echo:\n")
-			fmt.Printf("echo -ne \"%s\" > /tmp/fifo\n\n", ConvertBytesToEchoFormat(ciphertext))
+			fmt.Printf("echo -ne \"%s\" > /tmp/fifo\n\n", ConvertBytesToEchoFormat(noncePlusCiphertext))
 			continue
 		} else if userInput[0] == 'd' {
 
